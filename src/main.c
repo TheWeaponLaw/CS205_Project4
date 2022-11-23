@@ -3,20 +3,26 @@
 #include <unistd.h>
 #include <malloc.h>
 #include <time.h>
+#include <omp.h>
 #include "../include/function.h"
-#define SIZE 1000
+#define SIZE 2000
+#define RANGE 100
+
+#define START start = omp_get_wtime();
+#define END(NAME)          \
+    end = omp_get_wtime(); \
+    printf("%s time is %lf\n", NAME, end - start);
 int main()
 {
-    int range = 2;
-    clock_t start1, end1, start0, end0, start2, end2;
-    start1 = clock();
-    Matrix *matrix3 = createRam(SIZE, SIZE, range);
+    double start = 0;
+    double end = 0;
+    START
+    Matrix *matrix3 = createRam(SIZE, SIZE, RANGE);
     sleep(1);
-    Matrix *matrix4 = createRam(SIZE, SIZE, range);
+    Matrix *matrix4 = createRam(SIZE, SIZE, RANGE);
     Matrix *matrix5 = createZero(SIZE, SIZE);
     Matrix *matrix6 = createZero(SIZE, SIZE);
-    end1 = clock();
-    printf("Create time: %lf\n", (double)(end1 - start1) / CLOCKS_PER_SEC);
+    END("Create")
 
     // start1 = clock();
     // matmul_plain(matrix3, matrix4, matrix5);
@@ -24,16 +30,13 @@ int main()
     // printf("before time: %lf\n", (double)(end1 - start1) / CLOCKS_PER_SEC);
     // showMatrix(matrix5);
 
-    start1 = clock();
+    START
     matmul_improved(matrix3, matrix4, matrix5);
-    end1 = clock();
-    printf("improved time: %lf\n", (double)(end1 - start1) / CLOCKS_PER_SEC);
+    END("Improve")
 
-    start1 = clock();
+    START
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, SIZE, SIZE, SIZE, 1, matrix3->data, SIZE, matrix4->data, SIZE, 0, matrix6->data, SIZE);
-    end1 = clock();
-    printf("Cblas time: %lf\n", (double)(end1 - start1) / CLOCKS_PER_SEC);
-
+    END("Cblas")
     printf("error: %f\n", test(matrix5->data, matrix6->data, SIZE));
     return 0;
 }

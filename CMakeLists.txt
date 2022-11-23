@@ -12,6 +12,8 @@ add_executable(mat ${DIR_SRCS})
 
 add_definitions(-mavx2 -DWITH_AVX2)
 
+add_definitions(-fopenmp -lgomp)
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
