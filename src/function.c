@@ -55,7 +55,7 @@ struct Matrix *createZero(size_t row, size_t column)
                 free(matrix);
             return NULL;
         }
-        for (size_t i = 0; i < (unsigned long long)row * column; i++)
+        for (size_t i = 0; i < (unsigned long long)row * column; ++i)
         {
             matrix->data[i] = 0;
         }
@@ -119,7 +119,7 @@ struct Matrix *createRam(size_t row, size_t column, int range)
             return NULL;
         }
         srand(time(NULL));
-        for (size_t i = 0; i < (unsigned long long)row * column; i++)
+        for (size_t i = 0; i < (unsigned long long)row * column; ++i)
         {
             // matrix->data[i] = 1.0 * rand() / RAND_MAX * range;
             matrix->data[i] = rand() % range;
@@ -160,9 +160,9 @@ void showMatrix(const struct Matrix *matrix)
     else
     {
         printf("The address of the matrix is: %p\n", matrix);
-        for (size_t i = 0; i < matrix->row; i++)
+        for (size_t i = 0; i < matrix->row; ++i)
         {
-            for (size_t j = 0; j < matrix->column; j++)
+            for (size_t j = 0; j < matrix->column; ++j)
             {
                 if (fabsf(1.f - fabsf(matrix->data[i * (matrix->column) + j])) < 0.0001f)
                 {
@@ -211,10 +211,10 @@ void matmul_plain(const struct Matrix *matrix1, const struct Matrix *matrix2, st
             }
         }
 
-        for (size_t i = 0; i < matrix1->row * matrix2->column; i++)
+        for (size_t i = 0; i < matrix1->row * matrix2->column; ++i)
         {
             matrix3->data[i] = 0;
-            for (size_t j = 0; j < matrix1->column; j++)
+            for (size_t j = 0; j < matrix1->column; ++j)
             {
                 matrix3->data[i] += matrix1->data[i / matrix2->column * matrix1->column + j] *
                                     matrix2->data[i % matrix2->column + j * matrix2->column];
@@ -258,48 +258,45 @@ void matmul_improved(const struct Matrix *matrix1, const struct Matrix *matrix2,
         }
         matrix3->row = matrix1->row;
         matrix3->column = matrix2->column;
-        // mulmatrix(matrix1->row, matrix1->column, matrix1->data, matrix2->row, matrix2->column, matrix2->data, matrix3->data);
+        // mul_matrix(matrix1->row, matrix1->column, matrix1->data, matrix2->row, matrix2->column, matrix2->data, matrix3->data);
         float *temp = (float *)malloc(sizeof(float) * matrix2->row * matrix2->column);
         if (temp == NULL)
         {
             printf("Memory allocated failed!\n");
             return;
         }
-        for (size_t j = 0; j < matrix2->row; j++)
+        for (size_t j = 0; j < matrix2->row; ++j)
         {
-            for (size_t i = 0; i < matrix2->column; i++)
+            for (size_t i = 0; i < matrix2->column; ++i)
             {
                 temp[i * matrix2->row + j] = matrix2->data[j * matrix2->column + i];
             }
         }
-        if (matrix1->row < 8)
+        if (matrix1->row < 128)
         {
-#pragma omp parallel for
-            for (int n = 0; n < matrix1->row; n++)
-            {
-                mul_matrix(1, matrix1->column, matrix1->data + matrix1->column * n, matrix2->row, matrix2->column, temp, matrix3->data + matrix2->column * n);
-            }
+            mul_matrix(matrix1->row, matrix1->column, matrix1->data, matrix2->row, matrix2->column, temp, matrix3->data);
         }
         else
         {
 #pragma omp parallel for
-            for (int n = 0; n < 8; n++)
+            for (int n = 0; n < 8; ++n)
             {
-                mul_matrix(matrix1->row / 8, matrix1->column, matrix1->data + matrix1->row * matrix1->column * n / 8, matrix2->row, matrix2->column, temp, matrix3->data + matrix1->row * matrix2->column * n / 8);
+                mul_matrix(matrix1->row / 8, matrix1->column, matrix1->data + (matrix1->row / 8 * n) * matrix1->column, matrix2->row, matrix2->column, temp, matrix3->data + (matrix1->row / 8 * n) * matrix2->column);
             }
+            mul_matrix(matrix1->row % 8, matrix1->column, matrix1->data + (matrix1->row / 8 * 8) * matrix1->column, matrix2->row, matrix2->column, temp, matrix3->data + (matrix1->row / 8 * 8) * matrix2->column);
         }
         free(temp);
     }
 }
 
-void mul_matrix(size_t matrix1_row, size_t matrix1_col, float *matrix1, size_t matrix2_row, size_t matrix2_col, float *temp, float *matrix3)
+void mul_matrix(const size_t matrix1_row, const size_t matrix1_col, const float *matrix1, const size_t matrix2_row, const size_t matrix2_col, const float *temp, float *matrix3)
 {
     __m256 a, b;
     __m256 c = _mm256_setzero_ps();
     float sum[8] = {0};
-    for (size_t i = 0; i < matrix1_row; i++)
+    for (size_t i = 0; i < matrix1_row; ++i)
     {
-        for (size_t j = 0; j < matrix2_col; j++)
+        for (size_t j = 0; j < matrix2_col; ++j)
         {
             size_t lim_k = matrix1_col / 8 * 8;
             for (size_t k = 0; k < lim_k; k += 8)
@@ -313,7 +310,7 @@ void mul_matrix(size_t matrix1_row, size_t matrix1_col, float *matrix1, size_t m
 
             matrix3[i * matrix2_col + j] = sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7];
             //剩余部分
-            for (size_t k = lim_k; k < matrix1_col; k++)
+            for (size_t k = lim_k; k < matrix1_col; ++k)
             {
                 matrix3[i * matrix2_col + j] += matrix1[i * matrix1_col + k] * temp[j * matrix2_row + k];
             }
@@ -324,7 +321,7 @@ void mul_matrix(size_t matrix1_row, size_t matrix1_col, float *matrix1, size_t m
 float average(float *test, size_t size)
 {
     float ave = test[0];
-    for (size_t i = 1; i < size * size; i++)
+    for (size_t i = 1; i < size * size; ++i)
     {
         ave = ave + (test[i] - ave) / (i + 1);
     }
@@ -349,15 +346,16 @@ float test(float *sample, float *test, size_t size)
         dif_square += (test[i] - sample[i]) * (test[i] - sample[i]);
     }
 
-    return (dif_square / (size * size));
+    return (dif_square);
 }
 
 float test_2(float *sample, float *test, size_t size)
 {
     float dif = 0;
-    for (size_t i = 0; i < size * size; i++)
+    for (size_t i = 0; i < size * size; ++i)
     {
         dif += fabsf(sample[i] - test[i]);
+        printf("%lf", sample[i] - test[i]);
     }
     return dif;
 }
