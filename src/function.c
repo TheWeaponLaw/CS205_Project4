@@ -121,7 +121,8 @@ struct Matrix *createRam(size_t row, size_t column, int range)
         srand(time(NULL));
         for (size_t i = 0; i < (unsigned long long)row * column; i++)
         {
-            matrix->data[i] = 1.0 * rand() / RAND_MAX * range;
+            // matrix->data[i] = 1.0 * rand() / RAND_MAX * range;
+            matrix->data[i] = rand() % range;
         }
         return matrix;
     }
@@ -257,60 +258,12 @@ void matmul_improved(const struct Matrix *matrix1, const struct Matrix *matrix2,
         }
         matrix3->row = matrix1->row;
         matrix3->column = matrix2->column;
-
-        float *temp = (float *)malloc(sizeof(float) * matrix1->row * matrix2->column);
-        if (temp == NULL)
-        {
-            printf("Memory allocated failed!\n");
-            return;
-        }
+// mulmatrix(matrix1->row, matrix1->column, matrix1->data, matrix2->row, matrix2->column, matrix2->data, matrix3->data);
 #pragma omp parallel for
-        for (size_t j = 0; j < matrix2->row; j++)
+        for (int n = 0; n < 8; n++)
         {
-            size_t lim_i = matrix2->column / 8 * 8;
-            for (size_t i = 0; i < lim_i; i += 8)
-            {
-                temp[j * matrix2->row + i] = matrix2->data[i * matrix2->column + j];
-                temp[j * matrix2->row + i + 1] = matrix2->data[(i + 1) * matrix2->column + j];
-                temp[j * matrix2->row + i + 2] = matrix2->data[(i + 2) * matrix2->column + j];
-                temp[j * matrix2->row + i + 3] = matrix2->data[(i + 3) * matrix2->column + j];
-                temp[j * matrix2->row + i + 4] = matrix2->data[(i + 4) * matrix2->column + j];
-                temp[j * matrix2->row + i + 5] = matrix2->data[(i + 5) * matrix2->column + j];
-                temp[j * matrix2->row + i + 6] = matrix2->data[(i + 6) * matrix2->column + j];
-                temp[j * matrix2->row + i + 7] = matrix2->data[(i + 7) * matrix2->column + j];
-            }
-            for (size_t i = lim_i; i < matrix2->column; i++)
-            {
-                temp[j * matrix2->row + i] = matrix2->data[i * matrix2->column + j];
-            }
+            mulmatrix(matrix1->row / 8, matrix1->column, matrix1->data + matrix1->row * matrix1->column * n / 8, matrix2->row, matrix2->column, matrix2->data, matrix3->data + matrix1->row * matrix2->column * n / 8);
         }
-
-        __m256 a, b;
-        __m256 c = _mm256_setzero_ps();
-        float sum[8] = {0};
-        for (size_t i = 0; i < matrix1->row; i++)
-        {
-            for (size_t j = 0; j < matrix1->row; j++)
-            {
-                size_t lim_k = matrix1->row / 8 * 8;
-                for (size_t k = 0; k < lim_k; k += 8)
-                {
-                    a = _mm256_loadu_ps(matrix1->data + i * matrix1->row + k);
-                    b = _mm256_loadu_ps(temp + j * matrix1->row + k);
-                    c = _mm256_add_ps(c, _mm256_mul_ps(a, b));
-                }
-                _mm256_storeu_ps(sum, c);
-                c = _mm256_setzero_ps();
-
-                matrix3->data[i * matrix1->row + j] = sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7];
-                //剩余部分
-                for (size_t k = lim_k; k < matrix1->column; k++)
-                {
-                    matrix3->data[i * matrix1->row + j] += matrix1->data[i * matrix1->row + k] * matrix2->data[k * matrix1->column + j];
-                }
-            }
-        }
-        free(temp);
     }
 }
 
@@ -327,7 +280,17 @@ float test(float *sample, float *test, size_t size)
     }
     _mm256_storeu_ps(sum, c);
 
-    return ((sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7]) / (size * size));
+    return (sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7]);
+}
+
+float test_2(float *sample, float *test, size_t size)
+{
+    float dif = 0;
+    for (size_t i = 0; i < size * size; i++)
+    {
+        dif += fabsf(sample[i] - test[i]);
+    }
+    return dif;
 }
 
 void matmul_improved_up(const struct Matrix *matrix1, const struct Matrix *matrix2, struct Matrix *matrix3)
@@ -363,62 +326,101 @@ void matmul_improved_up(const struct Matrix *matrix1, const struct Matrix *matri
         }
         matrix3->row = matrix1->row;
         matrix3->column = matrix2->column;
-
-        float *temp = (float *)malloc(sizeof(float) * matrix1->row * matrix2->column);
-        if (temp == NULL)
-        {
-            printf("Memory allocated failed!\n");
-            return;
-        }
-#pragma omp parallel for
-        for (size_t j = 0; j < matrix2->row; j++)
-        {
-            size_t lim_i = matrix2->column / 8 * 8;
-            for (size_t i = 0; i < lim_i; i += 8)
-            {
-                temp[j * matrix2->row + i] = matrix2->data[i * matrix2->column + j];
-                temp[j * matrix2->row + i + 1] = matrix2->data[(i + 1) * matrix2->column + j];
-                temp[j * matrix2->row + i + 2] = matrix2->data[(i + 2) * matrix2->column + j];
-                temp[j * matrix2->row + i + 3] = matrix2->data[(i + 3) * matrix2->column + j];
-                temp[j * matrix2->row + i + 4] = matrix2->data[(i + 4) * matrix2->column + j];
-                temp[j * matrix2->row + i + 5] = matrix2->data[(i + 5) * matrix2->column + j];
-                temp[j * matrix2->row + i + 6] = matrix2->data[(i + 6) * matrix2->column + j];
-                temp[j * matrix2->row + i + 7] = matrix2->data[(i + 7) * matrix2->column + j];
-            }
-            for (size_t i = lim_i; i < matrix2->column; i++)
-            {
-                temp[j * matrix2->row + i] = matrix2->data[i * matrix2->column + j];
-            }
-        }
-
-        __m256 a, b;
-        __m256 c = _mm256_setzero_ps();
-        float sum[8] = {0};
-        float rest = 0;
-        for (size_t i = 0; i < matrix1->row; i++)
-        {
-            for (size_t j = 0; j < matrix1->row; j++)
-            {
-                size_t lim_k = matrix1->row / 8 * 8;
-                for (size_t k = 0; k < lim_k; k += 8)
-                {
-                    a = _mm256_loadu_ps(matrix1->data + i * matrix1->row + k);
-                    b = _mm256_loadu_ps(temp + j * matrix1->row + k);
-                    c = _mm256_add_ps(c, _mm256_mul_ps(a, b));
-                }
-                _mm256_storeu_ps(sum, c);
-                c = _mm256_setzero_ps();
-
-                matrix3->data[i * matrix1->row + j] = sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7];
-                //剩余部分
-                for (size_t k = lim_k; k < matrix1->column; k++)
-                {
-                    rest += matrix1->data[i * matrix1->row + k] * matrix2->data[k * matrix1->column + j];
-                }
-                matrix3->data[i * matrix1->row + j] += rest;
-                rest = 0;
-            }
-        }
-        free(temp);
     }
 }
+
+void mulmatrix(size_t matrix1_row, size_t matrix1_col, float *matrix1, size_t matrix2_row, size_t matrix2_col, float *matrix2, float *matrix3)
+{
+    float *temp = (float *)malloc(sizeof(float) * matrix2_row * matrix2_col);
+    if (temp == NULL)
+    {
+        printf("Memory allocated failed!\n");
+        return;
+    }
+    //#pragma omp parallel for
+    for (size_t j = 0; j < matrix2_row; j++)
+    {
+        size_t lim_i = matrix2_col / 8 * 8;
+        for (size_t i = 0; i < lim_i; i++)
+        {
+            temp[i * matrix2_row + j] = matrix2[j * matrix2_col + i];
+        }
+        for (size_t i = lim_i; i < matrix2_col; i++)
+        {
+            temp[i * matrix2_row + j] = matrix2[j * matrix2_col + i];
+        }
+    }
+    __m256 a, b;
+    __m256 c = _mm256_setzero_ps();
+    float sum[8] = {0};
+    for (size_t i = 0; i < matrix1_row; i++)
+    {
+        for (size_t j = 0; j < matrix2_col; j++)
+        {
+            size_t lim_k = matrix1_col / 8 * 8;
+            for (size_t k = 0; k < lim_k; k += 8)
+            {
+                a = _mm256_loadu_ps(matrix1 + i * matrix1_col + k);
+                b = _mm256_loadu_ps(temp + j * matrix2_row + k);
+                c = _mm256_add_ps(c, _mm256_mul_ps(a, b));
+            }
+            _mm256_storeu_ps(sum, c);
+            c = _mm256_setzero_ps();
+
+            matrix3[i * matrix2_col + j] = sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7];
+            //剩余部分
+            for (size_t k = lim_k; k < matrix1_col; k++)
+            {
+                matrix3[i * matrix2_col + j] += matrix1[i * matrix1_col + k] * temp[j * matrix2_row + k];
+            }
+        }
+    }
+    free(temp);
+}
+
+// float *temp = (float *)malloc(sizeof(float) * matrix1->row * matrix2->column);
+// if (temp == NULL)
+// {
+//     printf("Memory allocated failed!\n");
+//     return;
+// }
+// //#pragma omp parallel for
+// for (size_t j = 0; j < matrix2->row; j++)
+// {
+//     size_t lim_i = matrix2->column / 8 * 8;
+//     for (size_t i = 0; i < lim_i; i++)
+//     {
+//         temp[j * matrix2->row + i] = matrix2->data[i * matrix2->column + j];
+//     }
+//     for (size_t i = lim_i; i < matrix2->column; i++)
+//     {
+//         temp[j * matrix2->row + i] = matrix2->data[i * matrix2->column + j];
+//     }
+// }
+
+// __m256 a, b;
+// __m256 c = _mm256_setzero_ps();
+// float sum[8] = {0};
+// for (size_t i = 0; i < matrix1->row; i++)
+// {
+//     for (size_t j = 0; j < matrix1->row; j++)
+//     {
+//         size_t lim_k = matrix1->row / 8 * 8;
+//         for (size_t k = 0; k < lim_k; k += 8)
+//         {
+//             a = _mm256_loadu_ps(matrix1->data + i * matrix1->row + k);
+//             b = _mm256_loadu_ps(temp + j * matrix1->row + k);
+//             c = _mm256_add_ps(c, _mm256_mul_ps(a, b));
+//         }
+//         _mm256_storeu_ps(sum, c);
+//         c = _mm256_setzero_ps();
+
+//         matrix3->data[i * matrix1->row + j] = sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7];
+//         //剩余部分
+//         for (size_t k = lim_k; k < matrix1->column; k++)
+//         {
+//             matrix3->data[i * matrix1->row + j] += matrix1->data[i * matrix1->row + k] * matrix2->data[k * matrix1->column + j];
+//         }
+//     }
+// }
+// free(temp);
