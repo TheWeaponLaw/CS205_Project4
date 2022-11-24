@@ -91,7 +91,7 @@ struct Matrix *createSpe(size_t row, size_t column, const float *data)
     }
 }
 
-struct Matrix *createRam(size_t row, size_t column, int range)
+struct Matrix *createRam(size_t row, size_t column, size_t range)
 {
     //判断两个数据是否合法
     if (row <= 0 || column <= 0)
@@ -355,7 +355,6 @@ float test_2(float *sample, float *test, size_t size)
     for (size_t i = 0; i < size * size; ++i)
     {
         dif += fabsf(sample[i] - test[i]);
-        printf("%lf", sample[i] - test[i]);
     }
     return dif;
 }

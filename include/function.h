@@ -10,7 +10,7 @@ typedef struct Matrix
 
 struct Matrix *createZero(size_t row, size_t column);
 struct Matrix *createSpe(size_t row, size_t column, const float *data);
-struct Matrix *createRam(size_t row, size_t column, int range);
+struct Matrix *createRam(size_t row, size_t column, size_t range);
 void deleteMatrix(struct Matrix **matrix); //删除矩阵
 
 void matmul_plain(const struct Matrix *matrix1, const struct Matrix *matrix2, struct Matrix *matrix3); //矩阵相乘
