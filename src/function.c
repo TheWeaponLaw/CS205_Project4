@@ -258,98 +258,42 @@ void matmul_improved(const struct Matrix *matrix1, const struct Matrix *matrix2,
         }
         matrix3->row = matrix1->row;
         matrix3->column = matrix2->column;
-// mulmatrix(matrix1->row, matrix1->column, matrix1->data, matrix2->row, matrix2->column, matrix2->data, matrix3->data);
-#pragma omp parallel for
-        for (int n = 0; n < 8; n++)
+        // mulmatrix(matrix1->row, matrix1->column, matrix1->data, matrix2->row, matrix2->column, matrix2->data, matrix3->data);
+        float *temp = (float *)malloc(sizeof(float) * matrix2->row * matrix2->column);
+        if (temp == NULL)
         {
-            mulmatrix(matrix1->row / 8, matrix1->column, matrix1->data + matrix1->row * matrix1->column * n / 8, matrix2->row, matrix2->column, matrix2->data, matrix3->data + matrix1->row * matrix2->column * n / 8);
+            printf("Memory allocated failed!\n");
+            return;
         }
-    }
-}
-
-float test(float *sample, float *test, size_t size)
-{
-    float sum[8] = {0};
-    __m256 a, b;
-    __m256 c = _mm256_setzero_ps();
-    for (size_t i = 0; i < size * size; i += 8)
-    {
-        a = _mm256_loadu_ps(sample + i);
-        b = _mm256_loadu_ps(test + i);
-        c = _mm256_add_ps(c, _mm256_mul_ps(_mm256_sub_ps(a, b), _mm256_sub_ps(a, b)));
-    }
-    _mm256_storeu_ps(sum, c);
-
-    return (sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7]);
-}
-
-float test_2(float *sample, float *test, size_t size)
-{
-    float dif = 0;
-    for (size_t i = 0; i < size * size; i++)
-    {
-        dif += fabsf(sample[i] - test[i]);
-    }
-    return dif;
-}
-
-void matmul_improved_up(const struct Matrix *matrix1, const struct Matrix *matrix2, struct Matrix *matrix3)
-{
-    //判断两个相乘矩阵是否合法
-    if (judgeValid(matrix1) || judgeValid(matrix2))
-    {
-        printf("The matrix aren't valid for multiplying!\n");
-    }
-    else if (matrix1->column != matrix2->row)
-    { //判断矩阵1的列是否等于矩阵2的行
-        printf("The two matrix aren't match for multiplying!\n");
-    }
-    else
-    {
-        //若matrix3的指针不存在或matrix3的数据指针申请空间与要求空间不一样
-        if (matrix3 == NULL)
+        for (size_t j = 0; j < matrix2->row; j++)
         {
-            printf("The matrix3 doesn't exist!");
-        }
-        if (matrix1->row * matrix2->column != matrix3->row * matrix3->column) //_msize((*matrix3)->data))
-        {                                                                     //若空间大小不同
-            if (matrix3->data != NULL)
-            { //释放之前matrix数据空间
-                free(matrix3->data);
-            }
-            matrix3->data = (float *)malloc(sizeof(float) * matrix1->row * matrix2->column);
-            if (matrix3->data == NULL)
+            for (size_t i = 0; i < matrix2->column; i++)
             {
-                printf("Memory allocated failed!\n");
-                return;
+                temp[i * matrix2->row + j] = matrix2->data[j * matrix2->column + i];
             }
         }
-        matrix3->row = matrix1->row;
-        matrix3->column = matrix2->column;
+        if (matrix1->row < 8)
+        {
+#pragma omp parallel for
+            for (int n = 0; n < matrix1->row; n++)
+            {
+                mul_matrix(1, matrix1->column, matrix1->data + matrix1->column * n, matrix2->row, matrix2->column, temp, matrix3->data + matrix2->column * n);
+            }
+        }
+        else
+        {
+#pragma omp parallel for
+            for (int n = 0; n < 8; n++)
+            {
+                mul_matrix(matrix1->row / 8, matrix1->column, matrix1->data + matrix1->row * matrix1->column * n / 8, matrix2->row, matrix2->column, temp, matrix3->data + matrix1->row * matrix2->column * n / 8);
+            }
+        }
+        free(temp);
     }
 }
 
-void mulmatrix(size_t matrix1_row, size_t matrix1_col, float *matrix1, size_t matrix2_row, size_t matrix2_col, float *matrix2, float *matrix3)
+void mul_matrix(size_t matrix1_row, size_t matrix1_col, float *matrix1, size_t matrix2_row, size_t matrix2_col, float *temp, float *matrix3)
 {
-    float *temp = (float *)malloc(sizeof(float) * matrix2_row * matrix2_col);
-    if (temp == NULL)
-    {
-        printf("Memory allocated failed!\n");
-        return;
-    }
-    //#pragma omp parallel for
-    for (size_t j = 0; j < matrix2_row; j++)
-    {
-        size_t lim_i = matrix2_col / 8 * 8;
-        for (size_t i = 0; i < lim_i; i++)
-        {
-            temp[i * matrix2_row + j] = matrix2[j * matrix2_col + i];
-        }
-        for (size_t i = lim_i; i < matrix2_col; i++)
-        {
-            temp[i * matrix2_row + j] = matrix2[j * matrix2_col + i];
-        }
-    }
     __m256 a, b;
     __m256 c = _mm256_setzero_ps();
     float sum[8] = {0};
@@ -375,52 +319,45 @@ void mulmatrix(size_t matrix1_row, size_t matrix1_col, float *matrix1, size_t ma
             }
         }
     }
-    free(temp);
 }
 
-// float *temp = (float *)malloc(sizeof(float) * matrix1->row * matrix2->column);
-// if (temp == NULL)
-// {
-//     printf("Memory allocated failed!\n");
-//     return;
-// }
-// //#pragma omp parallel for
-// for (size_t j = 0; j < matrix2->row; j++)
-// {
-//     size_t lim_i = matrix2->column / 8 * 8;
-//     for (size_t i = 0; i < lim_i; i++)
-//     {
-//         temp[j * matrix2->row + i] = matrix2->data[i * matrix2->column + j];
-//     }
-//     for (size_t i = lim_i; i < matrix2->column; i++)
-//     {
-//         temp[j * matrix2->row + i] = matrix2->data[i * matrix2->column + j];
-//     }
-// }
+float average(float *test, size_t size)
+{
+    float ave = test[0];
+    for (size_t i = 1; i < size * size; i++)
+    {
+        ave = ave + (test[i] - ave) / (i + 1);
+    }
+    return (ave);
+}
 
-// __m256 a, b;
-// __m256 c = _mm256_setzero_ps();
-// float sum[8] = {0};
-// for (size_t i = 0; i < matrix1->row; i++)
-// {
-//     for (size_t j = 0; j < matrix1->row; j++)
-//     {
-//         size_t lim_k = matrix1->row / 8 * 8;
-//         for (size_t k = 0; k < lim_k; k += 8)
-//         {
-//             a = _mm256_loadu_ps(matrix1->data + i * matrix1->row + k);
-//             b = _mm256_loadu_ps(temp + j * matrix1->row + k);
-//             c = _mm256_add_ps(c, _mm256_mul_ps(a, b));
-//         }
-//         _mm256_storeu_ps(sum, c);
-//         c = _mm256_setzero_ps();
+float test(float *sample, float *test, size_t size)
+{
+    float sum[8] = {0};
+    __m256 a, b;
+    __m256 c = _mm256_setzero_ps();
+    for (size_t i = 0; i < (size * size) / 8 * 8; i += 8)
+    {
+        a = _mm256_loadu_ps(sample + i);
+        b = _mm256_loadu_ps(test + i);
+        c = _mm256_add_ps(c, _mm256_mul_ps(_mm256_sub_ps(a, b), _mm256_sub_ps(a, b)));
+    }
+    _mm256_storeu_ps(sum, c);
+    float dif_square = sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7];
+    for (size_t i = (size * size) / 8 * 8; i < size * size; i += 8)
+    {
+        dif_square += (test[i] - sample[i]) * (test[i] - sample[i]);
+    }
 
-//         matrix3->data[i * matrix1->row + j] = sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7];
-//         //剩余部分
-//         for (size_t k = lim_k; k < matrix1->column; k++)
-//         {
-//             matrix3->data[i * matrix1->row + j] += matrix1->data[i * matrix1->row + k] * matrix2->data[k * matrix1->column + j];
-//         }
-//     }
-// }
-// free(temp);
+    return (dif_square / (size * size));
+}
+
+float test_2(float *sample, float *test, size_t size)
+{
+    float dif = 0;
+    for (size_t i = 0; i < size * size; i++)
+    {
+        dif += fabsf(sample[i] - test[i]);
+    }
+    return dif;
+}

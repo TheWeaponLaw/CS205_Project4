@@ -5,7 +5,7 @@
 #include <time.h>
 #include <omp.h>
 #include "../include/function.h"
-#define SIZE 8000
+#define SIZE 2000
 #define RANGE 2
 
 #define START start = omp_get_wtime();
@@ -43,8 +43,7 @@ int main()
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, SIZE, SIZE, SIZE, 1, matrix3->data, SIZE, matrix4->data, SIZE, 0, matrix6->data, SIZE);
     END("Cblas")
     printf("error: %f\n", test(matrix5->data, matrix6->data, SIZE));
-    // showMatrix(matrix3);
-    // showMatrix(matrix4);
+    printf("average: %f\n", average(matrix6->data, SIZE));
     // showMatrix(matrix5);
     // showMatrix(matrix6);
     return 0;

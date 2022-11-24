@@ -18,5 +18,6 @@ void matmul_improved(const struct Matrix *matrix1, const struct Matrix *matrix2,
 void showMatrix(const struct Matrix *matrix); //展示矩阵
 float test(float *sample, float *test, size_t size);
 float test_2(float *sample, float *test, size_t size);
-void mulmatrix(size_t matrix1_row, size_t matrix1_col, float *matrix1, size_t matrix2_row, size_t matrix2_col, float *matrix2, float *matrix3);
+void mul_matrix(size_t matrix1_row, size_t matrix1_col, float *matrix1, size_t matrix2_row, size_t matrix2_col, float *matrix2, float *matrix3);
+float average(float *test, size_t size);
 #endif
