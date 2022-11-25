@@ -6,9 +6,10 @@
 #include <time.h>
 #include <immintrin.h>
 #include <malloc.h>
+#include <stdbool.h>
 #include "../include/function.h"
 
-char judgeValid(const struct Matrix *matrix)
+char judgeValid(const Matrix *matrix)
 {
     if (matrix == NULL)
     {
@@ -28,34 +29,35 @@ char judgeValid(const struct Matrix *matrix)
     }
 }
 
-struct Matrix *createZero(size_t row, size_t column)
+Matrix *createZero(size_t row, size_t column)
 {
+    Matrix *matrix = NULL;
     //判断两个数据是否合法
-    if (row <= 0 || column <= 0)
+    if (row == 0 || column == 0)
     {
-        printf("The row or column are invalid!\n");
+        fprintf(stderr, "The row or column are invalid!\n");
         return NULL;
     }
     else
     {
-        struct Matrix *matrix = (struct Matrix *)malloc(sizeof(size_t) * 2 + sizeof(float *));
+        matrix = (Matrix *)malloc(sizeof(Matrix));
         if (matrix == NULL)
         {
-            printf("The memory allocated failed\n");
+            fprintf(stderr, "The memory allocated failed\n");
             return NULL;
         }
         matrix->row = row;
         matrix->column = column;
-        matrix->data = (float *)malloc((unsigned long long)(sizeof(float) * (unsigned long long)row * (unsigned long long)column));
+        matrix->data = (float *)malloc((sizeof(float) * row * column));
         //判断申请空间是否成功
         if (matrix->data == NULL)
         {
-            printf("The memory allocated failed\n");
+            fprintf(stderr, "The memory allocated failed\n");
             if (matrix != NULL)
                 free(matrix);
             return NULL;
         }
-        for (size_t i = 0; i < (unsigned long long)row * column; ++i)
+        for (size_t i = 0; i < row * column; ++i)
         {
             matrix->data[i] = 0;
         }
@@ -63,82 +65,87 @@ struct Matrix *createZero(size_t row, size_t column)
     }
 }
 
-struct Matrix *createSpe(size_t row, size_t column, const float *data)
+Matrix *createSpe(size_t row, size_t column, const float *data)
 {
-    if (row <= 0 || column <= 0)
-    { //判断行列是否合法
-        printf("The row or column are invalid!\n");
-        return NULL;
-    }
-    else if (data == NULL)
-    { //判断输入数据是否为空
-        printf("Wrong data pointer!\n");
+    Matrix *matrix = NULL;
+    //判断两个数据是否合法
+    if (row == 0 || column == 0)
+    {
+        fprintf(stderr, "The row or column are invalid!\n");
         return NULL;
     }
     else
     {
-        struct Matrix *matrix = (struct Matrix *)malloc(sizeof(struct Matrix));
+        matrix = (Matrix *)malloc(sizeof(Matrix));
         if (matrix == NULL)
-        { //判断内存是否申请成功
-            printf("The memory allocated failed\n");
+        {
+            fprintf(stderr, "The memory allocated failed\n");
             return NULL;
         }
         matrix->row = row;
         matrix->column = column;
-        matrix->data = (float *)malloc(sizeof(float) * row * column);
+        matrix->data = (float *)malloc((sizeof(float) * row * column));
+        //判断申请空间是否成功
+        if (matrix->data == NULL)
+        {
+            fprintf(stderr, "The memory allocated failed\n");
+            if (matrix != NULL)
+                free(matrix);
+            return NULL;
+        }
         memcpy(matrix->data, data, sizeof(float) * row * column);
         return matrix;
     }
 }
 
-struct Matrix *createRam(size_t row, size_t column, size_t range)
+Matrix *createRam(size_t row, size_t column, size_t range)
 {
+    Matrix *matrix = NULL;
     //判断两个数据是否合法
-    if (row <= 0 || column <= 0)
+    if (row == 0 || column == 0)
     {
-        printf("The row or column are invalid!\n");
+        fprintf(stderr, "The row or column are invalid!\n");
         return NULL;
     }
     else
     {
-        struct Matrix *matrix = (struct Matrix *)malloc(sizeof(size_t) * 2 + sizeof(float *));
+        matrix = (Matrix *)malloc(sizeof(Matrix));
         if (matrix == NULL)
         {
-            printf("The memory allocated failed\n");
+            fprintf(stderr, "The memory allocated failed\n");
             return NULL;
         }
         matrix->row = row;
         matrix->column = column;
-        matrix->data = (float *)malloc((sizeof(float) * (unsigned long long)row * (unsigned long long)column));
+        matrix->data = (float *)malloc((sizeof(float) * row * column));
         //判断申请空间是否成功
         if (matrix->data == NULL)
         {
-            printf("The memory allocated failed\n");
+            fprintf(stderr, "The memory allocated failed\n");
             if (matrix != NULL)
                 free(matrix);
             return NULL;
         }
-        srand(time(NULL));
         for (size_t i = 0; i < (unsigned long long)row * column; ++i)
         {
-            // matrix->data[i] = 1.0 * rand() / RAND_MAX * range;
-            matrix->data[i] = rand() % range;
+            matrix->data[i] = 1.0 * rand() / RAND_MAX * range;
         }
         return matrix;
     }
 }
 
-void deleteMatrix(struct Matrix **matrix)
+bool deleteMatrix(Matrix **matrix)
 {
     if (*matrix == NULL)
     { //是否struct结构体指针是否为空
-        printf("The matrix doesn't exist for deleting!\n");
+        fprintf(stderr, "The matrix doesn't exist for deleting!\n");
+        return false;
     }
     else
     { //数据指针是否为空
         if ((*matrix)->data == NULL)
         {
-            printf("There's don't have data in matrix.\n");
+            fprintf(stderr, "There's don't have data in matrix.\n");
         }
         else
         {
@@ -148,10 +155,11 @@ void deleteMatrix(struct Matrix **matrix)
         //释放结构体其它申请空间
         free(*matrix);
         *matrix = NULL; //清除指针
+        return true;
     }
 }
 
-void showMatrix(const struct Matrix *matrix)
+void showMatrix(const Matrix *matrix)
 {
     if (judgeValid(matrix))
     {
@@ -179,23 +187,26 @@ void showMatrix(const struct Matrix *matrix)
     }
 }
 
-void matmul_plain(const struct Matrix *matrix1, const struct Matrix *matrix2, struct Matrix *matrix3)
+bool matmul_plain(const Matrix *matrix1, const Matrix *matrix2, Matrix *matrix3)
 {
     //判断两个相乘矩阵是否合法
     if (judgeValid(matrix1) || judgeValid(matrix2))
     {
-        printf("The matrix aren't valid for multiplying!\n");
+        fprintf(stderr, "The matrix aren't valid for multiplying!\n");
+        return false;
     }
     else if (matrix1->column != matrix2->row)
     { //判断矩阵1的列是否等于矩阵2的行
-        printf("The two matrix aren't match for multiplying!\n");
+        fprintf(stderr, "The two matrix aren't match for multiplying!\n");
+        return false;
     }
     else
     {
         //若matrix3的指针不存在或matrix3的数据指针申请空间与要求空间不一样
         if (matrix3 == NULL)
         {
-            printf("The matrix3 doesn't exist!");
+            fprintf(stderr, "The matrix3 doesn't exist!");
+            return false;
         }
         if (matrix1->row * matrix2->column != matrix3->row * matrix3->column) //_msize((*matrix3)->data))
         {                                                                     //若空间大小不同
@@ -206,8 +217,8 @@ void matmul_plain(const struct Matrix *matrix1, const struct Matrix *matrix2, st
             matrix3->data = (float *)malloc(sizeof(float) * matrix1->row * matrix2->column);
             if (matrix3->data == NULL)
             {
-                printf("Memory allocated failed!\n");
-                return;
+                fprintf(stderr, "Memory allocated failed!\n");
+                return false;
             }
         }
 
@@ -222,26 +233,30 @@ void matmul_plain(const struct Matrix *matrix1, const struct Matrix *matrix2, st
         }
         matrix3->row = matrix1->row;
         matrix3->column = matrix2->column;
+        return true;
     }
 }
 
-void matmul_improved(const struct Matrix *matrix1, const struct Matrix *matrix2, struct Matrix *matrix3)
+bool matmul_improved(const Matrix *matrix1, const Matrix *matrix2, Matrix *matrix3)
 {
     //判断两个相乘矩阵是否合法
     if (judgeValid(matrix1) || judgeValid(matrix2))
     {
-        printf("The matrix aren't valid for multiplying!\n");
+        fprintf(stderr, "The matrix aren't valid for multiplying!\n");
+        return false;
     }
     else if (matrix1->column != matrix2->row)
     { //判断矩阵1的列是否等于矩阵2的行
-        printf("The two matrix aren't match for multiplying!\n");
+        fprintf(stderr, "The two matrix aren't match for multiplying!\n");
+        return false;
     }
     else
     {
         //若matrix3的指针不存在或matrix3的数据指针申请空间与要求空间不一样
         if (matrix3 == NULL)
         {
-            printf("The matrix3 doesn't exist!");
+            fprintf(stderr, "The matrix3 doesn't exist!");
+            return false;
         }
         if (matrix1->row * matrix2->column != matrix3->row * matrix3->column) //_msize((*matrix3)->data))
         {                                                                     //若空间大小不同
@@ -252,8 +267,8 @@ void matmul_improved(const struct Matrix *matrix1, const struct Matrix *matrix2,
             matrix3->data = (float *)malloc(sizeof(float) * matrix1->row * matrix2->column);
             if (matrix3->data == NULL)
             {
-                printf("Memory allocated failed!\n");
-                return;
+                fprintf(stderr, "Memory allocated failed!\n");
+                return false;
             }
         }
         matrix3->row = matrix1->row;
@@ -262,8 +277,8 @@ void matmul_improved(const struct Matrix *matrix1, const struct Matrix *matrix2,
         float *temp = (float *)malloc(sizeof(float) * matrix2->row * matrix2->column);
         if (temp == NULL)
         {
-            printf("Memory allocated failed!\n");
-            return;
+            fprintf(stderr, "Memory allocated failed!\n");
+            return false;
         }
         for (size_t j = 0; j < matrix2->row; ++j)
         {
@@ -286,6 +301,7 @@ void matmul_improved(const struct Matrix *matrix1, const struct Matrix *matrix2,
             mul_matrix(matrix1->row % 8, matrix1->column, matrix1->data + (matrix1->row / 8 * 8) * matrix1->column, matrix2->row, matrix2->column, temp, matrix3->data + (matrix1->row / 8 * 8) * matrix2->column);
         }
         free(temp);
+        return true;
     }
 }
 

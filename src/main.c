@@ -13,6 +13,7 @@
 #define END(NAME)          \
     end = omp_get_wtime(); \
     printf("%s time is %lf\n", NAME, end - start);
+
 int main()
 {
     double start = 0;
@@ -40,14 +41,14 @@ int main()
 
     printf("error: %f\n", test(matrix5->data, matrix6->data, SIZE_ROW));
     printf("average: %f\n", average(matrix6->data, SIZE_ROW));
-    test_time();
+    // test_time();
     return 0;
 }
 
 double test_time()
 {
     double start, end;
-    double sum;
+    double sum = 0;
     for (int i = 0; i < 10; ++i)
     {
         Matrix *matrix1 = createRam(SIZE_ROW, SIZE_COL, RANGE);
