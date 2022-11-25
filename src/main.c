@@ -5,8 +5,8 @@
 #include <time.h>
 #include <omp.h>
 #include "../include/function.h"
-#define SIZE_ROW 2000
-#define SIZE_COL 2000
+#define SIZE_ROW 64000
+#define SIZE_COL 64000
 #define RANGE 10
 
 #define START start = omp_get_wtime();
@@ -24,24 +24,30 @@ int main()
     sleep(1);
     Matrix *matrix4 = createRam(SIZE_COL, SIZE_ROW, RANGE);
     Matrix *matrix5 = createZero(SIZE_ROW, SIZE_ROW);
-    Matrix *matrix6 = createZero(SIZE_ROW, SIZE_ROW);
+   // Matrix *matrix6 = createZero(SIZE_ROW,SIZE_ROW);
     END("Create")
 
     // START
     // matmul_plain(matrix3, matrix4, matrix5);
     // END("Plain")
+    //matmul_improved(matrix3, matrix4, matrix5);
+
+    // START
+    // matmul_improved(matrix3, matrix4, matrix5);
+    // END("Improve")
 
     START
-    matmul_improved(matrix3, matrix4, matrix5);
-    END("Improve")
-
-    START
-    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, SIZE_ROW, SIZE_ROW, SIZE_COL, 1, matrix3->data, SIZE_COL, matrix4->data, SIZE_ROW, 0, matrix6->data, SIZE_ROW);
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, SIZE_ROW, SIZE_ROW, SIZE_COL, 1, matrix3->data, SIZE_COL, matrix4->data, SIZE_ROW, 0, matrix5->data, SIZE_ROW);
     END("Cblas")
 
-    printf("error: %f\n", test(matrix5->data, matrix6->data, SIZE_ROW));
-    printf("average: %f\n", average(matrix6->data, SIZE_ROW));
-    // test_time();
+    // printf("error: %f\n", test_2(matrix5->data, matrix6->data, SIZE_ROW));
+    // printf("average: %f\n", average(matrix5->data, SIZE_ROW));
+
+    deleteMatrix(&matrix3);
+    deleteMatrix(&matrix4);
+    deleteMatrix(&matrix5);
+    //deleteMatrix(&matrix6);
+    //test_time();
     return 0;
 }
 

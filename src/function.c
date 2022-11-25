@@ -126,7 +126,7 @@ Matrix *createRam(size_t row, size_t column, size_t range)
                 free(matrix);
             return NULL;
         }
-        for (size_t i = 0; i < (unsigned long long)row * column; ++i)
+        for (size_t i = 0; i < row * column; ++i)
         {
             matrix->data[i] = 1.0 * rand() / RAND_MAX * range;
         }
