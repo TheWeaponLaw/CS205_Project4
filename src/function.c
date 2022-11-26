@@ -273,18 +273,18 @@ bool matmul_improved(const Matrix *matrix1, const Matrix *matrix2, Matrix *matri
         }
         matrix3->row = matrix1->row;
         matrix3->column = matrix2->column;
-        // mul_matrix(matrix1->row, matrix1->column, matrix1->data, matrix2->row, matrix2->column, matrix2->data, matrix3->data);
         float *temp = (float *)malloc(sizeof(float) * matrix2->row * matrix2->column);
         if (temp == NULL)
         {
             fprintf(stderr, "Memory allocated failed!\n");
             return false;
         }
+        float *data_pre = matrix2->data; //修改处
         for (size_t j = 0; j < matrix2->row; ++j)
         {
             for (size_t i = 0; i < matrix2->column; ++i)
             {
-                temp[i * matrix2->row + j] = matrix2->data[j * matrix2->column + i];
+                temp[i * matrix2->row + j] = *(data_pre++); //转置
             }
         }
         if (matrix1->row < 128)
@@ -294,7 +294,7 @@ bool matmul_improved(const Matrix *matrix1, const Matrix *matrix2, Matrix *matri
         else
         {
 #pragma omp parallel for
-            for (int n = 0; n < 8; ++n)
+            for (size_t n = 0; n < 8; ++n)
             {
                 mul_matrix(matrix1->row / 8, matrix1->column, matrix1->data + (matrix1->row / 8 * n) * matrix1->column, matrix2->row, matrix2->column, temp, matrix3->data + (matrix1->row / 8 * n) * matrix2->column);
             }
@@ -312,13 +312,17 @@ void mul_matrix(const size_t matrix1_row, const size_t matrix1_col, const float 
     float sum[8] = {0};
     for (size_t i = 0; i < matrix1_row; ++i)
     {
+        float *matrix1_add = matrix1 + i * matrix1_col; // matrix1的读取位置
+
         for (size_t j = 0; j < matrix2_col; ++j)
         {
             size_t lim_k = matrix1_col / 8 * 8;
+            float *matrix2_add = temp + j * matrix2_row; // matrix2的读取位置
+
             for (size_t k = 0; k < lim_k; k += 8)
             {
-                a = _mm256_loadu_ps(matrix1 + i * matrix1_col + k);
-                b = _mm256_loadu_ps(temp + j * matrix2_row + k);
+                a = _mm256_loadu_ps(matrix1_add + k);
+                b = _mm256_loadu_ps(matrix2_add + k);
                 c = _mm256_add_ps(c, _mm256_mul_ps(a, b));
             }
             _mm256_storeu_ps(sum, c);
@@ -326,9 +330,11 @@ void mul_matrix(const size_t matrix1_row, const size_t matrix1_col, const float 
 
             matrix3[i * matrix2_col + j] = sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7];
             //剩余部分
+            float *matrix1_data = matrix1 + i * matrix1_col;
+            float *matrix2_data = temp + j * matrix2_row;
             for (size_t k = lim_k; k < matrix1_col; ++k)
             {
-                matrix3[i * matrix2_col + j] += matrix1[i * matrix1_col + k] * temp[j * matrix2_row + k];
+                matrix3[i * matrix2_col + j] += *(matrix1_data + k) * *(matrix2_data + k);
             }
         }
     }
