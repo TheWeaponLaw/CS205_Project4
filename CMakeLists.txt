@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_C_STANDARD 11)
 project(CS205_Project4)
-
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -g")
 aux_source_directory(./src DIR_SRCS)
 
 include_directories(include)
