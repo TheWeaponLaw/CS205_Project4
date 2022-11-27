@@ -274,20 +274,19 @@ bool matmul_improved(const Matrix *matrix1, const Matrix *matrix2, Matrix *matri
         matrix3->row = matrix1->row;
         matrix3->column = matrix2->column;
 
-        float *data_pre = matrix2->data;
-
-        if (matrix1->row < 128)
+        if (matrix1->row < 128) //小矩阵不用开并行操作
         {
             mul_matrix(matrix1->row, matrix1->column, matrix1->data, matrix2->row, matrix2->column, matrix2->data, matrix3->data);
         }
         else
         {
+            int THREAD = 10; //获取最大线程数
 #pragma omp parallel for
-            for (size_t n = 0; n < 8; ++n)
+            for (size_t n = 0; n < THREAD; ++n) //矩阵分块并行
             {
-                mul_matrix(matrix1->row / 8, matrix1->column, matrix1->data + (matrix1->row / 8 * n) * matrix1->column, matrix2->row, matrix2->column, matrix2->data, matrix3->data + (matrix1->row / 8 * n) * matrix2->column);
+                mul_matrix(matrix1->row / THREAD, matrix1->column, matrix1->data + (matrix1->row / THREAD * n) * matrix1->column, matrix2->row, matrix2->column, matrix2->data, matrix3->data + (matrix1->row / THREAD * n) * matrix2->column);
             }
-            mul_matrix(matrix1->row % 8, matrix1->column, matrix1->data + (matrix1->row / 8 * 8) * matrix1->column, matrix2->row, matrix2->column, matrix2->data, matrix3->data + (matrix1->row / 8 * 8) * matrix2->column);
+            mul_matrix(matrix1->row % THREAD, matrix1->column, matrix1->data + (matrix1->row / THREAD * THREAD) * matrix1->column, matrix2->row, matrix2->column, matrix2->data, matrix3->data + (matrix1->row / THREAD * THREAD) * matrix2->column);
         }
         return true;
     }
@@ -300,7 +299,7 @@ void mul_matrix(const size_t matrix1_row, const size_t matrix1_col, float *matri
     for (size_t i = 0, i_col1 = 0, i_col2 = 0; i < matrix1_row; ++i, i_col1 += matrix1_col, i_col2 += matrix2_col)
     {
         size_t lim_k = matrix1_col / 8 * 8;
-        for (size_t k = 0; k < lim_k; k += 8)
+        for (size_t k = 0; k < lim_k; k += 8) //将i行对应k,8个填入
         {
             a0 = _mm256_broadcast_ss(matrix1 + i_col1 + k);
             a1 = _mm256_broadcast_ss(matrix1 + i_col1 + k + 1);
@@ -310,15 +309,15 @@ void mul_matrix(const size_t matrix1_row, const size_t matrix1_col, float *matri
             a5 = _mm256_broadcast_ss(matrix1 + i_col1 + k + 5);
             a6 = _mm256_broadcast_ss(matrix1 + i_col1 + k + 6);
             a7 = _mm256_broadcast_ss(matrix1 + i_col1 + k + 7);
-            size_t lim_j = matrix2_col / 8 * 8;
-            for (size_t j = 0, j_col = k * matrix2_col; j < lim_j; j += 8)
+            size_t lim_j = matrix2_col / 8 * 8;                            //修改；
+            for (size_t j = 0, j_col = k * matrix2_col; j < lim_j; j += 8) // 8个对应j行，和8个对应k，共64计算
             {
                 c = _mm256_loadu_ps(matrix3 + (i_col2 + j));
                 b = _mm256_loadu_ps(matrix2 + j_col + j);
                 c = _mm256_fmadd_ps(a0, b, c);
                 b = _mm256_loadu_ps(matrix2 + j_col + matrix1_col + j);
                 c = _mm256_fmadd_ps(a1, b, c);
-                b = _mm256_loadu_ps(matrix2 + j_col + matrix1_col * 2 + j);
+                b = _mm256_loadu_ps(matrix2 + j_col + matrix1_col + matrix1_col + j);
                 c = _mm256_fmadd_ps(a2, b, c);
                 b = _mm256_loadu_ps(matrix2 + j_col + matrix1_col * 3 + j);
                 c = _mm256_fmadd_ps(a3, b, c);
@@ -333,29 +332,31 @@ void mul_matrix(const size_t matrix1_row, const size_t matrix1_col, float *matri
                 _mm256_storeu_ps(matrix3 + i_col2 + j, c);
             }
             //剩余部分
+            for (size_t k2 = k; k2 < k + 8; ++k2)
+            {
+                for (size_t j = lim_j, j_col = k2 * matrix2_col; j < matrix2_col; j++)
+                {
+                    matrix3[i_col2 + j] += matrix1[i_col1 + k2] * matrix2[j_col + j];
+                }
+            }
+        }
+        //剩余的k
+        for (size_t k = lim_k; k < matrix1_col; ++k)
+        {
+
+            a0 = _mm256_broadcast_ss(matrix1 + i_col1 + k);
+            size_t lim_j = matrix2_col / 8 * 8;
+            for (size_t j = 0, j_col = k * matrix2_col; j < lim_j; j += 8)
+            {
+                c = _mm256_loadu_ps(matrix3 + (i_col2 + j));
+                b = _mm256_loadu_ps(matrix2 + j_col + j);
+                c = _mm256_fmadd_ps(a0, b, c);
+                _mm256_storeu_ps(matrix3 + i_col2 + j, c);
+            }
+            //剩余部分
             for (size_t j = lim_j, j_col = k * matrix2_col; j < matrix2_col; j++)
             {
                 matrix3[i_col2 + j] += matrix1[i_col1 + k] * matrix2[j_col + j];
-            }
-        }
-        for (size_t k = lim_k; k < matrix1_col; ++k)
-        {
-            for (size_t k = 0; k < lim_k; ++k)
-            {
-                a0 = _mm256_broadcast_ss(matrix1 + i_col1 + k);
-                size_t lim_j = matrix2_col / 8 * 8;
-                for (size_t j = 0, j_col = k * matrix2_col; j < lim_j; j += 8)
-                {
-                    c = _mm256_loadu_ps(matrix3 + (i_col2 + j));
-                    b = _mm256_loadu_ps(matrix2 + j_col + j);
-                    c = _mm256_fmadd_ps(a0, b, c);
-                    _mm256_storeu_ps(matrix3 + i_col2 + j, c);
-                }
-                //剩余部分
-                for (size_t j = lim_j, j_col = k * matrix2_col; j < matrix2_col; j++)
-                {
-                    matrix3[i_col2 + j] += matrix1[i_col1 + k] * matrix2[j_col + j];
-                }
             }
         }
     }
