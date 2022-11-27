@@ -6,8 +6,8 @@
 #include <omp.h>
 #include "../include/function.h"
 
-#define SIZE_ROW 10
-#define SIZE_COL 17
+#define SIZE_ROW 8000
+#define SIZE_COL 8000
 #define RANGE 2
 
 #define START start = omp_get_wtime();
