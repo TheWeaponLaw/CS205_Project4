@@ -6,9 +6,9 @@
 #include <omp.h>
 #include "../include/function.h"
 
-#define SIZE_ROW 8000
-#define SIZE_COL 8000
-#define RANGE 10
+#define SIZE_ROW 10
+#define SIZE_COL 17
+#define RANGE 2
 
 #define START start = omp_get_wtime();
 #define END(NAME)          \
@@ -29,7 +29,7 @@ int main()
     END("Create")
 
     // START
-    // matmul_plain(matrix3, matrix4, matrix5);
+    // matmul_plain(matrix3, matrix4, matrix6);
     // END("Plain")
 
     START
@@ -44,7 +44,7 @@ int main()
     float ave = average(matrix6->data, SIZE_ROW);
     printf("error: %f\n", dif);
     printf("average: %f\n", ave);
-    printf("average error per element is: %f\naverage error compare average is: %f\n", dif / (SIZE_ROW * SIZE_ROW), dif / (ave * SIZE_ROW * SIZE_ROW));
+    printf("average error per element is: %f\naverage error compare average is: %.15f\n", dif / (SIZE_ROW * SIZE_ROW), dif / (ave * SIZE_ROW * SIZE_ROW));
     // showMatrix(matrix5);
     // showMatrix(matrix6);
     deleteMatrix(&matrix3);
@@ -56,7 +56,7 @@ int main()
     return 0;
 }
 
-double test_time()
+void test_time()
 {
     double start, end;
     double sum = 0;

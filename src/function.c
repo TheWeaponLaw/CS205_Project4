@@ -279,20 +279,23 @@ bool matmul_improved(const Matrix *matrix1, const Matrix *matrix2, Matrix *matri
             fprintf(stderr, "Memory allocated failed!\n");
             return false;
         }
-        float *data_pre = matrix2->data; //修改处
-        for (size_t j = 0; j < matrix2->row; ++j)
-        {
-            for (size_t i = 0; i < matrix2->column; ++i)
-            {
-                temp[i * matrix2->row + j] = *(data_pre++); //转置
-            }
-        }
+        float *data_pre = matrix2->data;
+
         if (matrix1->row < 128)
         {
+            for (size_t i = 0; i < matrix2->row * matrix2->column; ++i)
+            {
+                temp[i] = matrix2->data[(i % matrix2->row) * matrix2->column + i / matrix2->row];
+            }
             mul_matrix(matrix1->row, matrix1->column, matrix1->data, matrix2->row, matrix2->column, temp, matrix3->data);
         }
         else
         {
+#pragma omp parallel for
+            for (size_t i = 0; i < matrix2->row * matrix2->column; ++i)
+            {
+                temp[i] = matrix2->data[(i % matrix2->row) * matrix2->column + i / matrix2->row]; //转置
+            }
 #pragma omp parallel for
             for (size_t n = 0; n < 8; ++n)
             {
@@ -305,7 +308,7 @@ bool matmul_improved(const Matrix *matrix1, const Matrix *matrix2, Matrix *matri
     }
 }
 
-void mul_matrix(const size_t matrix1_row, const size_t matrix1_col, const float *matrix1, const size_t matrix2_row, const size_t matrix2_col, const float *temp, float *matrix3)
+void mul_matrix(const size_t matrix1_row, const size_t matrix1_col, float *matrix1, const size_t matrix2_row, const size_t matrix2_col, float *temp, float *matrix3)
 {
     __m256 a, b;
     __m256 c = _mm256_setzero_ps();
@@ -330,8 +333,8 @@ void mul_matrix(const size_t matrix1_row, const size_t matrix1_col, const float 
 
             matrix3[i * matrix2_col + j] = sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7];
             //剩余部分
-            float *matrix1_data = matrix1 + i * matrix1_col;
-            float *matrix2_data = temp + j * matrix2_row;
+            const float *matrix1_data = matrix1 + i * matrix1_col;
+            const float *matrix2_data = temp + j * matrix2_row;
             for (size_t k = lim_k; k < matrix1_col; ++k)
             {
                 matrix3[i * matrix2_col + j] += *(matrix1_data + k) * *(matrix2_data + k);

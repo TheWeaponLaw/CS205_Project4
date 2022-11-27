@@ -18,7 +18,7 @@ bool matmul_improved(const Matrix *matrix1, const Matrix *matrix2, Matrix *matri
 void showMatrix(const Matrix *matrix); //展示矩阵
 float test(float *sample, float *test, size_t size);
 float test_2(float *sample, float *test, size_t size);
-void mul_matrix(const size_t matrix1_row, const size_t matrix1_col, const float *matrix1, const size_t matrix2_row, const size_t matrix2_col, const float *matrix2, float *matrix3);
+void mul_matrix(const size_t matrix1_row, const size_t matrix1_col, float *matrix1, const size_t matrix2_row, const size_t matrix2_col, float *matrix2, float *matrix3);
 float average(float *test, size_t size);
-double test_time();
+void test_time();
 #endif
