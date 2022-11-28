@@ -312,28 +312,29 @@ void mul_matrix(const size_t matrix1_row, const size_t matrix1_col, float *matri
             size_t lim_j = matrix2_col / 8 * 8;                            //修改；
             for (size_t j = 0, j_col = k * matrix2_col; j < lim_j; j += 8) // 8个对应j行，和8个对应k，共64计算
             {
-                c = _mm256_loadu_ps(matrix3 + (i_col2 + j));
+                c = _mm256_loadu_ps(matrix3 + i_col2 + j);
                 b = _mm256_loadu_ps(matrix2 + j_col + j);
                 c = _mm256_fmadd_ps(a0, b, c);
-                b = _mm256_loadu_ps(matrix2 + j_col + matrix1_col + j);
+                b = _mm256_loadu_ps(matrix2 + j_col + matrix2_col + j);
                 c = _mm256_fmadd_ps(a1, b, c);
-                b = _mm256_loadu_ps(matrix2 + j_col + matrix1_col + matrix1_col + j);
+                b = _mm256_loadu_ps(matrix2 + j_col + matrix2_col * 2 + j);
                 c = _mm256_fmadd_ps(a2, b, c);
-                b = _mm256_loadu_ps(matrix2 + j_col + matrix1_col * 3 + j);
+                b = _mm256_loadu_ps(matrix2 + j_col + matrix2_col * 3 + j);
                 c = _mm256_fmadd_ps(a3, b, c);
-                b = _mm256_loadu_ps(matrix2 + j_col + matrix1_col * 4 + j);
+                b = _mm256_loadu_ps(matrix2 + j_col + matrix2_col * 4 + j);
                 c = _mm256_fmadd_ps(a4, b, c);
-                b = _mm256_loadu_ps(matrix2 + j_col + matrix1_col * 5 + j);
+                b = _mm256_loadu_ps(matrix2 + j_col + matrix2_col * 5 + j);
                 c = _mm256_fmadd_ps(a5, b, c);
-                b = _mm256_loadu_ps(matrix2 + j_col + matrix1_col * 6 + j);
+                b = _mm256_loadu_ps(matrix2 + j_col + matrix2_col * 6 + j);
                 c = _mm256_fmadd_ps(a6, b, c);
-                b = _mm256_loadu_ps(matrix2 + j_col + matrix1_col * 7 + j);
+                b = _mm256_loadu_ps(matrix2 + j_col + matrix2_col * 7 + j);
                 c = _mm256_fmadd_ps(a7, b, c);
                 _mm256_storeu_ps(matrix3 + i_col2 + j, c);
             }
             //剩余部分
             for (size_t k2 = k; k2 < k + 8; ++k2)
             {
+
                 for (size_t j = lim_j, j_col = k2 * matrix2_col; j < matrix2_col; j++)
                 {
                     matrix3[i_col2 + j] += matrix1[i_col1 + k2] * matrix2[j_col + j];
@@ -343,7 +344,6 @@ void mul_matrix(const size_t matrix1_row, const size_t matrix1_col, float *matri
         //剩余的k
         for (size_t k = lim_k; k < matrix1_col; ++k)
         {
-
             a0 = _mm256_broadcast_ss(matrix1 + i_col1 + k);
             size_t lim_j = matrix2_col / 8 * 8;
             for (size_t j = 0, j_col = k * matrix2_col; j < lim_j; j += 8)

@@ -6,8 +6,8 @@
 #include <omp.h>
 #include "../include/function.h"
 
-#define SIZE_ROW 7
-#define SIZE_COL 17
+#define SIZE_ROW 19
+#define SIZE_COL 1321
 #define RANGE 2
 
 #define START start = omp_get_wtime();
@@ -45,8 +45,8 @@ int main()
     printf("error: %f\n", dif);
     printf("average: %f\n", ave);
     printf("average error per element is: %f\naverage error compare average is: %.15f\n", dif / (SIZE_ROW * SIZE_ROW), dif / (ave * SIZE_ROW * SIZE_ROW));
-    showMatrix(matrix5);
-    showMatrix(matrix6);
+    // showMatrix(matrix5);
+    // showMatrix(matrix6);
     deleteMatrix(&matrix3);
     deleteMatrix(&matrix4);
     deleteMatrix(&matrix5);
